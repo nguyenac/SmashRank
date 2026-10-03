@@ -1,6 +1,8 @@
 # Hướng dẫn cài đặt & triển khai trên VPS
 
-Yêu cầu: **Ubuntu 22.04+**, PHP **8.2+**, MariaDB **10.6+**, Nginx, Node.js **20+**, Composer 2.
+Yêu cầu: **Ubuntu 22.04+**, PHP **8.2 / 8.3 / 8.4** (khuyến nghị **8.3**), MariaDB **10.6+**, Nginx, Node.js **20+**, Composer 2.
+
+> ✅ **Đã kiểm tra tương thích PHP 8.3**: ràng buộc `"php": "^8.2"` chấp nhận 8.3; Laravel 11 hỗ trợ chính thức 8.2–8.4; toàn bộ package (Sanctum 4, dompdf 3, web-push 8) tương thích 8.3; mã nguồn không dùng tính năng chỉ có ở PHP 8.4 (property hooks, asymmetric visibility, `new` chain không ngoặc).
 
 > Dự án gộp backend + frontend trong **một codebase Laravel duy nhất** — chỉ cần deploy 1 thư mục, 1 domain.
 
