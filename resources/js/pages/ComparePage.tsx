@@ -5,6 +5,11 @@ import {
 import { api } from '../api';
 import type { Athlete } from '../types';
 
+interface H2HData {
+  summary: { total: number; a_wins: number; b_wins: number; a_win_rate: number };
+  matches: { date: string; venue?: string | null; winner_id: number; score: string; walkover: boolean }[];
+}
+
 /**
  * So sánh vận động viên:
  *  - Đơn: Radar overlay 2 VĐV + số liệu cạnh nhau
@@ -15,6 +20,7 @@ export default function ComparePage() {
   const [a1, setA1] = useState<Athlete | null>(null);
   const [a2, setA2] = useState<Athlete | null>(null);
   const [a3, setA3] = useState<Athlete | null>(null);
+  const [h2h, setH2h] = useState<H2HData | null>(null);
   const [mode, setMode] = useState<'singles' | 'team'>('singles');
   const [t1a, setT1a] = useState<Athlete | null>(null);
   const [t1b, setT1b] = useState<Athlete | null>(null);
@@ -24,6 +30,15 @@ export default function ComparePage() {
   useEffect(() => {
     api.get<{ data: Athlete[] }>('/athletes', { params: { per_page: 60 } }).then((r) => setAthletes(r.data));
   }, []);
+
+  // Tải lịch sử đối đầu khi chọn đủ 2 VĐV
+  useEffect(() => {
+    if (a1 && a2 && a1.id !== a2.id) {
+      api.get<{ data: H2HData }>('/h2h', { params: { a: a1.id, b: a2.id } })
+        .then((r) => setH2h(r.data))
+        .catch(() => setH2h(null));
+    } else setH2h(null);
+  }, [a1, a2]);
 
   const power = (a: Athlete | null, b: Athlete | null) => {
     if (!a || !b) return 0;
@@ -124,6 +139,39 @@ export default function ComparePage() {
                   </div>
                 ))}
               </div>
+
+              {/* Head-to-Head đối đầu */}
+              {h2h && h2h.summary.total > 0 && (
+                <div className="card">
+                  <h2 className="mb-3 font-semibold">🆚 Lịch sử đối đầu (H2H) — {h2h.summary.total} trận</h2>
+                  <div className="mb-3 flex items-center justify-center gap-6">
+                    <div className="text-center">
+                      <p className="text-sm font-semibold">{a1.full_name}</p>
+                      <p className="text-3xl font-black text-emerald-400">{h2h.summary.a_wins}</p>
+                    </div>
+                    <span className="text-neutral-500">—</span>
+                    <div className="text-center">
+                      <p className="text-sm font-semibold">{a2.full_name}</p>
+                      <p className="text-3xl font-black text-amber-400">{h2h.summary.b_wins}</p>
+                    </div>
+                  </div>
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {h2h.matches.map((m, i) => (
+                        <tr key={i} className="border-b border-neutral-800/60">
+                          <td className="p-2 text-neutral-400">{m.date}{m.venue ? ` · ${m.venue}` : ''}</td>
+                          <td className="p-2">{m.score}{m.walkover ? ' (W.O.)' : ''}</td>
+                          <td className="p-2 text-right">
+                            {m.winner_id === a1.id
+                              ? <span className="text-emerald-400">{a1.full_name} thắng</span>
+                              : <span className="text-amber-400">{a2.full_name} thắng</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </>
           )}
         </>

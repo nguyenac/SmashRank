@@ -96,6 +96,54 @@ class AthleteInsightsController extends Controller
         ]]);
     }
 
+    /**
+     * Head-to-Head đối đầu: ?a=&b= — lịch sử trận giữa 2 VĐV + tổng kết.
+     */
+    public function headToHead(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'a' => ['required', 'integer', 'exists:athletes,id', 'different:b'],
+            'b' => ['required', 'integer', 'exists:athletes,id'],
+        ]);
+
+        $matches = \App\Models\MatchGame::query()
+            ->where(function ($q) use ($data) {
+                $q->where(fn ($x) => $x->where('athlete1_id', $data['a'])->where('athlete2_id', $data['b']))
+                  ->orWhere(fn ($x) => $x->where('athlete1_id', $data['b'])->where('athlete2_id', $data['a']));
+            })
+            ->where('status', 'confirmed')
+            ->with(['athlete1:id,full_name', 'athlete2:id,full_name'])
+            ->orderByDesc('played_at')
+            ->limit(30)
+            ->get();
+
+        $aWins = $matches->filter(fn ($m) => $m->winnerId() === $data['a'])->count();
+        $bWins = $matches->filter(fn ($m) => $m->winnerId() === $data['b'])->count();
+
+        $athleteA = Athlete::find($data['a']);
+        $athleteB = Athlete::find($data['b']);
+
+        return response()->json(['data' => [
+            'athletes' => [
+                'a' => $athleteA->only(['id', 'full_name', 'country_code', 'elo_rating']),
+                'b' => $athleteB->only(['id', 'full_name', 'country_code', 'elo_rating']),
+            ],
+            'summary' => [
+                'total' => $matches->count(),
+                'a_wins' => $aWins,
+                'b_wins' => $bWins,
+                'a_win_rate' => $matches->count() ? round($aWins / $matches->count() * 100, 1) : 0,
+            ],
+            'matches' => $matches->map(fn ($m) => [
+                'date' => $m->played_at->format('Y-m-d'),
+                'venue' => $m->venue,
+                'winner_id' => $m->winnerId(),
+                'score' => "{$m->athlete1?->full_name} {$m->score1}-{$m->score2} {$m->athlete2?->full_name}",
+                'walkover' => $m->walkover,
+            ]),
+        ]]);
+    }
+
     /** Ghi chú thi đấu: thẻ yếu tố quyết định thắng/thua cho từng trận. */
     public function matchNote(Request $request, MatchGame $match): JsonResponse
     {

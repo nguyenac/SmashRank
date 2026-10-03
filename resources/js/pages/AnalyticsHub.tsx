@@ -82,6 +82,11 @@ export default function AnalyticsHub() {
         </div>
 
         <div className="card lg:col-span-2">
+          <h2 className="mb-3 font-semibold">🏆 Bảng xếp hạng CLB</h2>
+          <ClubLeaderboardTable />
+        </div>
+
+        <div className="card lg:col-span-2">
           <h2 className="mb-3 font-semibold">Hạng phong trào Việt Vũ</h2>
           <div className="flex flex-wrap gap-2">
             {Object.entries(data.grassroots_distribution).map(([rank, total]) => (
@@ -93,5 +98,39 @@ export default function AnalyticsHub() {
         </div>
       </div>
     </div>
+  );
+}
+
+/** Bảng xếp hạng CLB: tổng Elo trung bình, số thành viên, VĐV dẫn đầu. */
+function ClubLeaderboardTable() {
+  const [clubs, setClubs] = useState<{ rank: number; club: string; members: number; avg_elo: number; total_wins: number; top_player?: { id: number; full_name: string; elo_rating: number } | null }[]>([]);
+
+  useEffect(() => {
+    api.get<{ data: typeof clubs }>('/clubs/leaderboard').then((r) => setClubs(r.data)).catch(() => {});
+  }, []);
+
+  if (clubs.length === 0) return <p className="text-sm text-neutral-500">Chưa có dữ liệu CLB.</p>;
+
+  return (
+    <table className="w-full text-sm">
+      <thead>
+        <tr className="border-b border-neutral-800 text-left text-xs uppercase text-neutral-400">
+          <th className="p-2">#</th><th className="p-2">Câu lạc bộ</th><th className="p-2 text-right">Thành viên</th>
+          <th className="p-2 text-right">Elo TB</th><th className="p-2 text-right">Tổng thắng</th><th className="p-2">VĐV dẫn đầu</th>
+        </tr>
+      </thead>
+      <tbody>
+        {clubs.map((c) => (
+          <tr key={c.club} className="border-b border-neutral-800/60">
+            <td className="p-2 font-bold">{c.rank === 1 ? '🥇' : c.rank === 2 ? '🥈' : c.rank === 3 ? '🥉' : c.rank}</td>
+            <td className="p-2 font-semibold">{c.club}</td>
+            <td className="p-2 text-right font-mono">{c.members}</td>
+            <td className="p-2 text-right font-mono text-emerald-400">{c.avg_elo}</td>
+            <td className="p-2 text-right font-mono">{c.total_wins}</td>
+            <td className="p-2 text-neutral-300">{c.top_player ? `${c.top_player.full_name} (${c.top_player.elo_rating})` : '—'}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }

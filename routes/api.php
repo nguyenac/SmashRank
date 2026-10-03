@@ -35,6 +35,7 @@ use App\Http\Controllers\Api\DemographicsController;
 use App\Http\Controllers\Api\MyDashboardController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\ClubController;
 
 /*
 |--------------------------------------------------------------------------
@@ -130,6 +131,10 @@ Route::delete('/training-groups/{group}/leave', [GroupController::class, 'leave'
 // ---------- Analytics Hub (nhân khẩu học) ----------
 Route::get('/demographics', [DemographicsController::class, 'index']);
 
+// ---------- Bảng xếp hạng CLB + H2H đối đầu ----------
+Route::get('/clubs/leaderboard', [ClubController::class, 'leaderboard']);
+Route::get('/h2h', [AthleteInsightsController::class, 'headToHead']); // ?a=&b=
+
 // ---------- Public: Thương hiệu (xem) ----------
 Route::get('/brands', [BrandController::class, 'index']);
 Route::get('/brands/{brand}', [BrandController::class, 'show']);
@@ -148,8 +153,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/2fa/enable', [AuthController::class, 'enableTwoFactor']);
     Route::post('/2fa/disable', [AuthController::class, 'disableTwoFactor']);
 
-    // Ghi kết quả trận đấu (AddMatchResultModal) → cập nhật Elo + thắng/thua
+    // Ghi kết quả trận đấu → cập nhật Elo + thắng/thua
     Route::post('/matches', [MatchController::class, 'store'])->middleware('throttle:10,1');
+
+    // Thách đấu/giao lưu có mã xác nhận (chống tự công nhận điểm)
+    Route::post('/matches/challenge', [MatchController::class, 'challenge'])->middleware('throttle:10,1');
+    Route::post('/matches/confirm', [MatchController::class, 'confirmCode'])->middleware('throttle:10,1');
+    Route::get('/my/streak', [MyDashboardController::class, 'streak']);
 
     // Bình luận (chống spam 15s/lần)
     Route::post('/comments', [CommentController::class, 'store']);

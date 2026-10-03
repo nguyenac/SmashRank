@@ -106,6 +106,58 @@ class MyDashboardController extends Controller
         }, 'my-match-history.csv', ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
+    /**
+     * Streak hoạt động: số ngày liên tiếp có trận/thiếu cân/hoàn thành lịch tập.
+     * Dùng cho widget giữ chân người chơi + push "đừng bỏ cuộc".
+     */
+    public function streak(Request $request): JsonResponse
+    {
+        $athlete = Athlete::where('user_id', $request->user()->id)->first();
+        if (! $athlete) {
+            return response()->json(['data' => ['current' => 0, 'best' => 0, 'total_active_days' => 0]]);
+        }
+
+        $dates = collect();
+        $dates = $dates->merge($athlete->matches()->pluck('played_at')); // trận
+        $dates = $dates->merge($athlete->weightEntries()->pluck('measured_at')); // đo sức khỏe
+        $dates = $dates->merge(
+            \App\Models\TrainingSchedule::where('athlete_id', $athlete->id)
+                ->where('done', true)->get()
+                ->map(fn ($s) => $s->week_start->copy()->addDays($s->day_of_week - 1)->toDateString())
+        );
+
+        $set = $dates->map(fn ($d) => \Carbon\Carbon::parse($d)->toDateString())->unique()->sort()->values();
+        if ($set->isEmpty()) {
+            return response()->json(['data' => ['current' => 0, 'best' => 0, 'total_active_days' => 0]]);
+        }
+
+        // Chuỗi hiện tại: đếm lùi từ hôm nay (hoặc hôm qua nếu hôm nay chưa hoạt động)
+        $current = 0;
+        $cursor = now()->startOfDay();
+        if (! $set->contains($cursor->toDateString())) {
+            $cursor->subDay();
+        }
+        while ($set->contains($cursor->toDateString())) {
+            $current++;
+            $cursor->subDay();
+        }
+
+        // Chuỗi dài nhất
+        $best = 1; $run = 1;
+        for ($i = 1; $i < $set->count(); $i++) {
+            $prev = \Carbon\Carbon::parse($set[$i - 1]);
+            $cur = \Carbon\Carbon::parse($set[$i]);
+            $run = $prev->diffInDays($cur) === 1 ? $run + 1 : 1;
+            $best = max($best, $run);
+        }
+
+        return response()->json(['data' => [
+            'current' => $current,
+            'best' => $best,
+            'total_active_days' => $set->count(),
+        ]]);
+    }
+
     /** Tiến độ học viên: cân nặng + nhịp tim + kỹ năng theo thời gian. */
     public function progress(Request $request): JsonResponse
     {

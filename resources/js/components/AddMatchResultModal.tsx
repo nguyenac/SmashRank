@@ -23,6 +23,8 @@ export default function AddMatchResultModal({ onClose, presetAthlete1 }: Props) 
   const [score1, setScore1] = useState(2);
   const [score2, setScore2] = useState(0);
   const [walkover, setWalkover] = useState(false);
+  const [useCode, setUseCode] = useState(false);
+  const [issuedCode, setIssuedCode] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   // Tìm VĐV theo tên (debounce)
@@ -56,13 +58,24 @@ export default function AddMatchResultModal({ onClose, presetAthlete1 }: Props) 
     }
     setBusy(true);
     try {
-      const res = await api.post<{ message: string }>('/matches', {
+      const payload = {
         athlete1_id: player1.id,
         athlete2_id: player2.id,
         score1: walkover ? (score1 >= score2 ? 1 : 0) : score1,
         score2: walkover ? (score1 >= score2 ? 0 : 1) : score2,
         walkover,
-      });
+      };
+
+      // Chế độ mã xác nhận: tạo trận chờ — đối thủ nhập mã mới áp Elo
+      if (useCode) {
+        const res = await api.post<{ data: { match_code: string } }>('/matches/challenge', payload);
+        setIssuedCode(res.data.data.match_code);
+        notifySuccess('Đã tạo trận chờ xác nhận!');
+        setBusy(false);
+        return;
+      }
+
+      const res = await api.post<{ message: string }>('/matches', payload);
       notifySuccess('Đã ghi nhận kết quả trận đấu!', res.data.message);
       onClose();
     } catch (err) {
@@ -136,6 +149,19 @@ export default function AddMatchResultModal({ onClose, presetAthlete1 }: Props) 
             <input type="checkbox" checked={walkover} onChange={(e) => setWalkover(e.target.checked)} className="accent-emerald-500" />
             Trận thắng bỏ cuộc (W.O.)
           </label>
+          <label className="flex items-center gap-2 text-sm text-neutral-300">
+            <input type="checkbox" checked={useCode} onChange={(e) => setUseCode(e.target.checked)} className="accent-emerald-500" />
+            🔐 Mã xác nhận 2 bên (chống gian lận — đối thủ nhập mã mới cộng Elo)
+          </label>
+
+          {issuedCode && (
+            <div className="rounded-xl border-2 border-emerald-600 bg-emerald-500/10 p-4 text-center">
+              <p className="text-xs text-neutral-400">Mã xác nhận trận — gửi cho đối thủ:</p>
+              <p className="my-1 font-mono text-3xl font-black tracking-[0.4em] text-emerald-400">{issuedCode}</p>
+              <p className="text-xs text-neutral-400">Đối thủ nhập mã này ở Dashboard → Elo chỉ được cộng khi có xác nhận.</p>
+              <button onClick={onClose} className="btn-primary mt-2 text-xs">Đóng</button>
+            </div>
+          )}
 
           {!walkover && (
             <div className="flex items-center gap-4">

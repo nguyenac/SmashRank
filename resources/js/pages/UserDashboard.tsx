@@ -14,6 +14,8 @@ interface DashData {
   summary: { athlete?: { id: number; full_name: string; elo_rating: number; world_rank?: number | null }; wins: number; losses: number; win_rate: number };
 }
 
+interface Streak { current: number; best: number; total_active_days: number }
+
 /**
  * User Dashboard (Athlete Dashboard cá nhân):
  *  - Tóm tắt: thứ hạng, Elo, W/L gần nhất, trang bị
@@ -24,8 +26,48 @@ interface DashData {
 export default function UserDashboard() {
   const { user } = useAuth();
   const [data, setData] = useState<DashData | null>(null);
+  const [streak, setStreak] = useState<Streak | null>(null);
+  const [code, setCode] = useState('');
   const [blocked, setBlocked] = useState('');
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    api.get<{ data: Streak }>('/my/streak').then((r) => setStreak(r.data)).catch(() => {});
+  }, []);
+
+  const confirmCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await api.post<{ message: string }>('/matches/confirm', { code });
+      notifySuccess('Đã xác nhận trận!', res.data.message);
+      setCode('');
+      window.location.reload();
+    } catch (err) { notifyError('Xác nhận thất bại', errorMessage(err)); }
+  };
+
+  const shareMatch = (m: MyMatch) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 700; canvas.height = 300;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = '#0a0a0b'; ctx.fillRect(0, 0, 700, 300);
+    ctx.fillStyle = '#10b981'; ctx.fillRect(0, 0, 700, 8);
+    ctx.fillStyle = '#34d399'; ctx.font = 'bold 22px sans-serif'; ctx.fillText('SmashRank — Kết quả trận đấu', 36, 52);
+    ctx.fillStyle = '#fafafa'; ctx.font = 'bold 20px sans-serif';
+    const won = m.result === 'win';
+    ctx.fillText(won ? '🏆 CHIẾN THẮNG' : '💪 THUA', 36, 100);
+    ctx.fillStyle = '#e5e5e5'; ctx.font = '18px sans-serif';
+    ctx.fillText(`${m.venue ? m.venue + ' · ' : ''}${m.date}`, 36, 132);
+    ctx.fillStyle = '#fafafa'; ctx.font = 'bold 34px sans-serif';
+    ctx.fillText(`${m.my_score} - ${m.opp_score}`, 36, 190);
+    ctx.fillStyle = '#a3a3a3'; ctx.font = '15px sans-serif';
+    ctx.fillText(`vs ${m.opponent ?? '—'}${m.walkover ? ' (W.O.)' : ''}`, 36, 222);
+    ctx.fillStyle = '#34d399'; ctx.fillText(window.location.origin + '/dashboard', 36, 266);
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = `smashrank-match-${m.id}.png`;
+    a.click();
+    notifySuccess('Đã tạo ảnh kết quả trận!');
+  };
 
   useEffect(() => {
     api.get<DashData | { message: string; code: string }>('/my/matches')
@@ -81,6 +123,26 @@ export default function UserDashboard() {
         </div>
       </div>
 
+      {/* Streak + Xác nhận trận bằng mã */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        {streak && (
+          <div className="card">
+            <h2 className="font-semibold">🔥 Chuỗi hoạt động</h2>
+            <p className="mt-1 text-3xl font-black text-amber-400">{streak.current} ngày</p>
+            <p className="text-xs text-neutral-400">Kỷ lục: {streak.best} ngày · Tổng {streak.total_active_days} ngày hoạt động</p>
+          </div>
+        )}
+        <form onSubmit={confirmCode} className="card">
+          <h2 className="font-semibold">🔐 Xác nhận trận bằng mã</h2>
+          <div className="mt-2 flex gap-2">
+            <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} maxLength={6}
+              placeholder="MÃ 6 KÝ TỰ" className="flex-1 text-center font-mono tracking-[0.3em]" />
+            <button className="btn-primary text-xs">Xác nhận</button>
+          </div>
+          <p className="mt-1 text-xs text-neutral-500">Nhập mã đối thủ gửi để cộng Elo cho cả hai.</p>
+        </form>
+      </div>
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="card text-center"><p className="text-xs text-neutral-400">Elo hiện tại</p><p className="text-2xl font-bold text-emerald-400">{summary.athlete?.elo_rating ?? '—'}</p></div>
         <div className="card text-center"><p className="text-xs text-neutral-400">Thứ hạng TG</p><p className="text-2xl font-bold">{summary.athlete?.world_rank ? `#${summary.athlete.world_rank}` : '—'}</p></div>
@@ -111,7 +173,7 @@ export default function UserDashboard() {
             <thead>
               <tr className="border-b border-neutral-800 text-left text-xs uppercase text-neutral-400">
                 <th className="p-3">Ngày</th><th className="p-3">Địa điểm</th><th className="p-3">Đối thủ</th>
-                <th className="p-3 text-center">Tỷ số</th><th className="p-3">Kết quả</th>
+                <th className="p-3 text-center">Tỷ số</th><th className="p-3">Kết quả</th><th className="p-3">Chia sẻ</th>
               </tr>
             </thead>
             <tbody>
@@ -122,6 +184,9 @@ export default function UserDashboard() {
                   <td className="p-3 font-semibold">{m.opponent ?? '—'}</td>
                   <td className="p-3 text-center font-mono">{m.walkover ? 'W.O.' : `${m.my_score}-${m.opp_score}`}</td>
                   <td className="p-3">{m.result === 'win' ? <span className="text-emerald-400">Thắng</span> : <span className="text-rose-400">Thua</span>}</td>
+                  <td className="p-3">
+                    <button onClick={() => shareMatch(m)} className="text-xs text-amber-400 hover:underline" title="Tạo ảnh chia sẻ">🖼️</button>
+                  </td>
                 </tr>
               ))}
               {data.data.length === 0 && <tr><td colSpan={5} className="p-6 text-center text-neutral-500">Chưa có trận đấu nào.</td></tr>}
