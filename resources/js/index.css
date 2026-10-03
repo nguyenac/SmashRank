@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-surface-950 text-neutral-100 antialiased;
+  }
+
+  /* Light mode: html không có class .dark */
+  html:not(.dark) body {
+    @apply bg-neutral-100 text-neutral-900;
+  }
+  html:not(.dark) .card {
+    @apply border-neutral-200 bg-white;
+  }
+  html:not(.dark) header.sticky {
+    @apply border-neutral-200 bg-white/90;
+  }
+  html:not(.dark) input,
+  html:not(.dark) select,
+  html:not(.dark) textarea {
+    @apply border-neutral-300 bg-white text-neutral-900 placeholder-neutral-400;
+  }
+  html:not(.dark) .btn-ghost {
+    @apply border-neutral-300 text-neutral-700;
+  }
+
+  input, select, textarea {
+    @apply rounded-lg border border-neutral-700 bg-surface-800 px-3 py-2 text-sm text-neutral-100
+      placeholder-neutral-500 outline-none focus:border-emerald-500;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-neutral-950
+      transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply rounded-lg border border-neutral-700 px-4 py-2 text-sm font-medium text-neutral-200
+      transition hover:border-emerald-500 hover:text-emerald-400;
+  }
+  .card {
+    @apply rounded-xl border border-neutral-800 bg-surface-900 p-5;
+  }
+  .label {
+    @apply mb-1 block text-xs font-medium uppercase tracking-wide text-neutral-400;
+  }
+}

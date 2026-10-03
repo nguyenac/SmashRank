@@ -1,0 +1,23 @@
+{
+  "name": "SmashRank — Xếp Hạng Cầu Lông",
+  "short_name": "SmashRank",
+  "description": "Bảng xếp hạng BWF & Elo phong trào, giải đấu, kỷ lục, trang thiết bị cầu lông",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0b",
+  "theme_color": "#10b981",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

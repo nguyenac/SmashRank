@@ -1,0 +1,28 @@
+# ---- Node / Frontend ----
+/node_modules
+/public/build
+/public/hot
+npm-debug.log
+yarn-error.log
+
+# ---- Laravel ----
+/.phpunit.cache
+/public/storage
+/storage/*.key
+/backend/vendor
+/vendor
+.env
+.env.backup
+.env.production
+.phpunit.result.cache
+.phpactor.json
+
+# ---- IDE / OS ----
+/.idea
+/.vscode
+/.fleet
+.DS_Store
+
+# ---- Backups cục bộ ----
+/storage/app/backups/*
+!storage/app/backups/.gitkeep
