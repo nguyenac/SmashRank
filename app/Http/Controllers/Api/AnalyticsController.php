@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Athlete;
 use App\Models\RankingHistory;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class AnalyticsController extends Controller
@@ -37,13 +38,13 @@ class AnalyticsController extends Controller
             ->orderByDesc('total')
             ->get();
 
-        return response()->json([
-            'data' => [
-                'skill_distribution' => $skillDistribution,
-                'grassroots_distribution' => $grassrootsDistribution,
-                'equipment_by_brand' => $equipmentByBrand,
-            ],
+        $data = Cache::remember('analytics:quick', 300, fn () => [
+            'skill_distribution' => $skillDistribution,
+            'grassroots_distribution' => $grassrootsDistribution,
+            'equipment_by_brand' => $equipmentByBrand,
         ]);
+
+        return response()->json(['data' => $data]);
     }
     /**
      * Dashboard thống kê tổng hợp:
@@ -52,6 +53,14 @@ class AnalyticsController extends Controller
      *  - Top VĐV có Elo tăng trưởng mạnh nhất
      */
     public function summary(): JsonResponse
+    {
+        // #6 Cache 5 phút — dashboard tổng hợp query nặng (join histories)
+        $data = Cache::remember('analytics:summary', 300, fn () => $this->computeSummary());
+
+        return response()->json(['data' => $data]);
+    }
+
+    private function computeSummary(): array
     {
         $newThisWeek = Athlete::where('created_at', '>=', now()->startOfWeek())->count();
         $newThisMonth = Athlete::where('created_at', '>=', now()->startOfMonth())->count();
@@ -101,16 +110,14 @@ class AnalyticsController extends Controller
             ->groupBy('skill_level')
             ->pluck('total', 'skill_level');
 
-        return response()->json([
-            'data' => [
-                'total_athletes' => $totalAthletes,
-                'total_users' => $totalUsers,
-                'new_this_week' => $newThisWeek,
-                'new_this_month' => $newThisMonth,
-                'country_distribution' => $countryDistribution,
-                'top_elo_growers' => $growers,
-                'skill_levels' => $skillLevels,
-            ],
-        ]);
+        return [
+            'total_athletes' => $totalAthletes,
+            'total_users' => $totalUsers,
+            'new_this_week' => $newThisWeek,
+            'new_this_month' => $newThisMonth,
+            'country_distribution' => $countryDistribution,
+            'top_elo_growers' => $growers,
+            'skill_levels' => $skillLevels,
+        ];
     }
 }

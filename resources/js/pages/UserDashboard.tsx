@@ -189,7 +189,7 @@ export default function UserDashboard() {
                   </td>
                 </tr>
               ))}
-              {data.data.length === 0 && <tr><td colSpan={5} className="p-6 text-center text-neutral-500">Chưa có trận đấu nào.</td></tr>}
+              {data.data.length === 0 && <tr><td colSpan={6} className="p-6 text-center text-neutral-500">Chưa có trận đấu nào.</td></tr>}
             </tbody>
           </table>
         </div>

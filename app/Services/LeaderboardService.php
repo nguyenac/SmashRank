@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Athlete;
 use App\Models\MatchGame;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -16,11 +17,12 @@ class LeaderboardService
 {
     public function get(string $period = 'all', int $limit = 50): array
     {
-        return match ($period) {
+        // #6 Cache ngắn (60s) — leaderboard được xem nhiều, query join nặng
+        return Cache::remember("leaderboard:{$period}:{$limit}", 60, fn () => match ($period) {
             'monthly' => $this->periodBoard(now()->startOfMonth(), now()->endOfMonth()),
             'weekly' => $this->weeklyBoard(),
             default => $this->allBoard($limit),
-        };
+        });
     }
 
     private function allBoard(int $limit): array

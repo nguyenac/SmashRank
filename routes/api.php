@@ -63,7 +63,7 @@ Route::get('/products/{item}', [EquipmentController::class, 'publicShow']);
 
 // ---------- Public: Sinh nhật / Kỷ lục / Giải đấu ----------
 Route::get('/birthdays', [BirthdayController::class, 'index']);       // ?date=YYYY-MM-DD (mặc định: hôm nay)
-Route::get('/records', [RecordsController::class, 'index']);          // Danh sách Kỷ lục
+Route::get('/records', [RecordsController::class, 'index'])->middleware('throttle:60,1'); // Danh sách Kỷ lục
 Route::get('/tournaments', [TournamentController::class, 'index']);   // ?q= &level= &association=
 Route::get('/tournaments/{tournament}', [TournamentController::class, 'show']); // ?association= tìm theo hiệp hội
 Route::get('/tournaments/{tournament}/matches', [TournamentMatchController::class, 'index']);
@@ -72,8 +72,8 @@ Route::get('/tournaments/{tournament}/matches/live', [TournamentMatchController:
 // ---------- Public: Leaderboard (tổng / tuần / tháng) ----------
 Route::get('/leaderboards', [LeaderboardController::class, 'index']);
 
-// ---------- Global Search (VĐV / CLB / thiết bị / giải đấu) ----------
-Route::get('/search', [SearchController::class, 'index']);
+// ---------- Global Search (throttle chống lạm dụng endpoint công khai) ----------
+Route::get('/search', [SearchController::class, 'index'])->middleware('throttle:60,1');
 
 // ---------- Smart Court Scheduler ----------
 Route::get('/courts', [CourtController::class, 'index']);
@@ -129,7 +129,7 @@ Route::post('/training-groups/{group}/join', [GroupController::class, 'join'])->
 Route::delete('/training-groups/{group}/leave', [GroupController::class, 'leave'])->middleware('auth:sanctum');
 
 // ---------- Analytics Hub (nhân khẩu học) ----------
-Route::get('/demographics', [DemographicsController::class, 'index']);
+Route::get('/demographics', [DemographicsController::class, 'index'])->middleware('throttle:60,1');
 
 // ---------- Bảng xếp hạng CLB + H2H đối đầu ----------
 Route::get('/clubs/leaderboard', [ClubController::class, 'leaderboard']);

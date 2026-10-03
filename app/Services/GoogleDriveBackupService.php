@@ -34,24 +34,20 @@ class GoogleDriveBackupService
         $filename = 'smashrank-backup-'.date('Ymd-His').'.sql.gz';
         $target = $dir.'/'.$filename;
 
-        $mysqldump = config('services.backup.mysqldump_path', 'mysqldump');
-        $mysql = config('services.backup.mysql_path', 'mysql');
+        // #4 Bảo mật: credentials nằm trong file --defaults-extra-file (chmod 0600),
+        // không xuất hiện trong process list (ps aux)
+        $defaultsFile = self::writeDefaultsFile();
 
         $cmd = sprintf(
-            '%s --host=%s --port=%s --user=%s --password=%s %s | gzip > %s',
-            escapeshellcmd($mysqldump),
-            escapeshellarg(config('database.connections.mariadb.host', '127.0.0.1')),
-            escapeshellarg((string) config('database.connections.mariadb.port', '3306')),
-            escapeshellarg(config('database.connections.mariadb.username')),
-            escapeshellarg(config('database.connections.mariadb.password')),
+            '%s --defaults-extra-file=%s %s | gzip > %s',
+            escapeshellcmd(config('services.backup.mysqldump_path', 'mysqldump')),
+            escapeshellarg($defaultsFile),
             escapeshellarg(config('database.connections.mariadb.database')),
             escapeshellarg($target)
         );
 
-        // Restore sẽ dùng biến $mysql (mysql CLI) — tham chiếu để tránh unused
-        unset($mysql);
-
         exec($cmd.' 2>&1', $output, $exitCode);
+        @unlink($defaultsFile); // xóa file credentials ngay sau khi dùng
 
         if ($exitCode !== 0 || ! file_exists($target)) {
             Log::error('Backup dump thất bại', ['output' => implode("\n", $output)]);
@@ -137,14 +133,11 @@ class GoogleDriveBackupService
             throw new \RuntimeException('Không thể giải nén file sao lưu.');
         }
 
-        $mysql = config('services.backup.mysql_path', 'mysql');
+        $defaultsFile = self::writeDefaultsFile();
         $cmd = sprintf(
-            '%s --host=%s --port=%s --user=%s --password=%s %s < %s',
-            escapeshellcmd($mysql),
-            escapeshellarg(config('database.connections.mariadb.host', '127.0.0.1')),
-            escapeshellarg((string) config('database.connections.mariadb.port', '3306')),
-            escapeshellarg(config('database.connections.mariadb.username')),
-            escapeshellarg(config('database.connections.mariadb.password')),
+            '%s --defaults-extra-file=%s %s < %s',
+            escapeshellcmd(config('services.backup.mysql_path', 'mysql')),
+            escapeshellarg($defaultsFile),
             escapeshellarg(config('database.connections.mariadb.database')),
             escapeshellarg($sqlPath)
         );
@@ -155,6 +148,26 @@ class GoogleDriveBackupService
         if ($exitCode !== 0) {
             throw new \RuntimeException('Phục hồi thất bại: '.implode('; ', array_slice($output, -3)));
         }
+    }
+
+    /** #4 Ghi file credentials tạm (chmod 0600) cho mysqldump/mysql CLI. */
+    public static function writeDefaultsFile(): string
+    {
+        $dir = storage_path('app/backups');
+        if (! is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+        $path = $dir.'/.my-'.bin2hex(random_bytes(6)).'.cnf';
+        file_put_contents($path, sprintf(
+            "[client]\nhost=%s\nport=%s\nuser=%s\npassword=\"%s\"\n",
+            config('database.connections.mariadb.host', '127.0.0.1'),
+            config('database.connections.mariadb.port', '3306'),
+            config('database.connections.mariadb.username'),
+            config('database.connections.mariadb.password')
+        ));
+        chmod($path, 0600);
+
+        return $path;
     }
 
     private function getAccessToken(): string

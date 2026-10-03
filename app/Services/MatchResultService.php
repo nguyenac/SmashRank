@@ -48,6 +48,12 @@ class MatchResultService
                 ->where('status', 'pending')
                 ->firstOrFail();
 
+            // #3 Mã hết hạn sau 7 ngày — tránh cộng điểm retroactive
+            if ($match->created_at->diffInDays(now()) > 7) {
+                $match->update(['status' => 'cancelled']);
+                throw new \RuntimeException('Mã đã hết hạn (trận tạo quá 7 ngày).');
+            }
+
             // Chỉ VĐV tham gia trận mới được xác nhận; người tạo không được tự
             // xác nhận trận của chính mình (chống tự công nhận điểm) — admin ngoại lệ
             $athleteUserIds = [$match->athlete1->user_id, $match->athlete2?->user_id];

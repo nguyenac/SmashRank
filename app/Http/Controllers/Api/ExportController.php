@@ -100,17 +100,14 @@ class ExportController extends Controller
         );
     }
 
-    /** Xuất toàn bộ CSDL dạng file .sql (mysqldump stream) — để lưu trữ/khôi phục. */
+    /** Xuất toàn bộ CSDL dạng file .sql (mysqldump stream) — credentials trong defaults-file (an toàn). */
     public function dbSql()
     {
-        $mysqldump = config('services.backup.mysqldump_path', 'mysqldump');
+        $defaultsFile = \App\Services\GoogleDriveBackupService::writeDefaultsFile();
         $cmd = sprintf(
-            '%s --host=%s --port=%s --user=%s --password=%s %s',
-            escapeshellcmd($mysqldump),
-            escapeshellarg(config('database.connections.mariadb.host', '127.0.0.1')),
-            escapeshellarg((string) config('database.connections.mariadb.port', '3306')),
-            escapeshellarg(config('database.connections.mariadb.username')),
-            escapeshellarg(config('database.connections.mariadb.password')),
+            '%s --defaults-extra-file=%s %s',
+            escapeshellcmd(config('services.backup.mysqldump_path', 'mysqldump')),
+            escapeshellarg($defaultsFile),
             escapeshellarg(config('database.connections.mariadb.database'))
         );
 

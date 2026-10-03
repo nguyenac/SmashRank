@@ -58,7 +58,15 @@ class EloService
 
         foreach ($histories as $history) {
             $month = Carbon::parse($history->recorded_month)->startOfMonth();
-            $newElo = (float) $history->elo_rating;
+
+            // #1 IDEMPOTENT: luôn tính lại từ điểm GỐC (raw_elo) — lần chạy đầu
+            // ghi nhận raw_elo = elo hiện tại; các lần chạy sau dùng lại raw_elo
+            // nên kết quả không bị cộng dồn boost/decay qua nhiều lần chạy.
+            if ($history->raw_elo === null) {
+                $history->raw_elo = $history->elo_rating;
+                $history->save();
+            }
+            $newElo = (float) $history->raw_elo;
 
             // ---- 1) Covid decay: kiểm tra các tháng vắng mặt TRƯỚC tháng này ----
             $prevMonth = $month->copy()->subMonth()->format('Y-m');

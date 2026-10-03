@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class RankingHistory extends Model
 {
     protected $fillable = [
-        'athlete_id', 'recorded_month', 'points', 'elo_rating', 'win_rate',
+        'athlete_id', 'recorded_month', 'points', 'elo_rating', 'win_rate', 'raw_elo',
     ];
 
     protected $casts = [

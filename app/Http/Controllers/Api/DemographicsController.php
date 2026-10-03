@@ -11,6 +11,14 @@ class DemographicsController extends Controller
 {
     public function index(): JsonResponse
     {
+        // #6 Cache 10 phút — dữ liệu nhân khẩu học thay đổi chậm
+        $data = \Illuminate\Support\Facades\Cache::remember('demographics', 600, fn () => $this->compute());
+
+        return response()->json(['data' => $data]);
+    }
+
+    private function compute(): array
+    {
         $currentYear = (int) now()->year;
 
         $ageBuckets = [
@@ -41,11 +49,11 @@ class DemographicsController extends Controller
             ->selectRaw('grassroots_rank, COUNT(*) as total')
             ->groupBy('grassroots_rank')->pluck('total', 'grassroots_rank');
 
-        return response()->json(['data' => [
+        return [
             'age_distribution' => $ageDistribution,
             'nationality_distribution' => $nationality,
             'skill_distribution' => $skills,
             'grassroots_distribution' => $grassroots,
-        ]]);
+        ];
     }
 }

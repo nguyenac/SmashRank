@@ -28,6 +28,9 @@ class RecordsService
     {
         $count = 0;
 
+        // #6 Xóa cache bảng kỷ lục khi rebuild
+        \Illuminate\Support\Facades\Cache::forget('records:index');
+
         DB::transaction(function () use (&$count) {
             Record::query()->delete();
 

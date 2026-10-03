@@ -33,9 +33,9 @@ class SearchController extends Controller
         ];
 
         if (in_array('athletes', $types)) {
+            // #9 Tận dụng FULLTEXT index có sẵn (nhanh hơn LIKE %q%)
             $result['athletes'] = Athlete::query()
-                ->where(fn ($sub) => $sub->where('full_name', 'like', "%{$q}%")
-                    ->orWhere('nickname', 'like', "%{$q}%"))
+                ->whereFullText(['full_name', 'nickname', 'club'], $q)
                 ->limit(6)
                 ->get(['id', 'full_name', 'country_code', 'category', 'elo_rating'])
                 ->toArray();
@@ -53,11 +53,9 @@ class SearchController extends Controller
         }
 
         if (in_array('equipment', $types)) {
-            // Tìm theo tên/model/mã sản phẩm (model = mã SKU)
+            // #9 FULLTEXT index mới thêm (name, model, brand) — tìm theo mã SKU nhanh
             $result['equipment'] = EquipmentItem::query()
-                ->where(fn ($sub) => $sub->where('name', 'like', "%{$q}%")
-                    ->orWhere('model', 'like', "%{$q}%")
-                    ->orWhere('brand', 'like', "%{$q}%"))
+                ->whereFullText(['name', 'model', 'brand'], $q)
                 ->limit(6)
                 ->get(['id', 'name', 'type', 'brand', 'model', 'price'])
                 ->toArray();
