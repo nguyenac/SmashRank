@@ -35,22 +35,6 @@ class RecordsController extends Controller
             }
         );
 
-        return response()->json([
-            'data' => $records->map(fn (Record $r) => [
-                'id' => $r->id,
-                'type' => $r->type,
-                'title' => $r->title,
-                'value' => $r->value,
-                'period' => $r->period,
-                'description' => $r->description,
-                'athlete' => $r->athlete ? [
-                    'id' => $r->athlete->id,
-                    'full_name' => $r->athlete->full_name,
-                    'country_code' => $r->athlete->country_code,
-                    'avatar_url' => $r->athlete->avatar_url,
-                    'elo_rating' => $r->athlete->elo_rating,
-                ] : null,
-            ]),
-        ]);
+        return response()->json(['data' => $records]);
     }
 }
